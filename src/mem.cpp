@@ -27,6 +27,42 @@
 
 namespace {
 
+#ifndef MEM_ALLOWED_EXE_PATH
+#define MEM_ALLOWED_EXE_PATH ""
+#endif
+
+static bool g_initialized = false;
+
+static bool Init(int32_t pid) {
+    g_initialized = false;
+
+    char proc_path[64];
+    snprintf(proc_path, sizeof(proc_path), "/proc/%d/exe", pid);
+
+    char exe_path[512] = {};
+    const ssize_t len = readlink(proc_path, exe_path, sizeof(exe_path) - 1);
+    if (len <= 0) {
+        MEM_LOGE("init失败: 无法读取 %s", proc_path);
+        return false;
+    }
+
+    exe_path[len] = '\0';
+
+    if (MEM_ALLOWED_EXE_PATH[0] == '\0') {
+        MEM_LOGE("init失败: MEM_ALLOWED_EXE_PATH 未配置");
+        return false;
+    }
+
+    if (strcmp(exe_path, MEM_ALLOWED_EXE_PATH) != 0) {
+        MEM_LOGE("init失败: exe路径不匹配: %s", exe_path);
+        return false;
+    }
+
+    g_initialized = true;
+    MEM_LOGI("init成功: %s", exe_path);
+    return true;
+}
+
 static bool IsRangePresent(uint64_t address, int32_t pid, size_t size) {
     char path[256];
     snprintf(path, sizeof(path), "/proc/%d/pagemap", pid);
@@ -360,6 +396,12 @@ static void FreeMaps(MemMapList* list) {
 static int32_t InjectSoStub(int32_t pid, const char* so_path) {
     (void)pid;
     (void)so_path;
+
+    if (!g_initialized) {
+        MEM_LOGE("inject_so拒绝: 尚未通过init校验");
+        return -1;
+    }
+
     MEM_LOGE("inject_so ABI slot is intentionally not reconstructed");
     return -1;
 }
@@ -374,6 +416,7 @@ static MemApi g_mem_api = {
     &FreeProcesses,
     &FreeMaps,
     &InjectSoStub,
+    &Init,
 };
 
 } // namespace

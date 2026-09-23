@@ -12,6 +12,11 @@ target_include_directories(mem PUBLIC
 target_compile_features(mem PRIVATE cxx_std_17)
 target_compile_options(mem PRIVATE -Wall -Wextra -Wpedantic -fvisibility=hidden)
 
+set(MEM_ALLOWED_EXE_PATH "" CACHE STRING "Exact /proc/<pid>/exe path accepted by init()")
+if(NOT MEM_ALLOWED_EXE_PATH STREQUAL "")
+    target_compile_definitions(mem PRIVATE MEM_ALLOWED_EXE_PATH="${MEM_ALLOWED_EXE_PATH}")
+endif()
+
 if(ANDROID)
     find_library(log-lib log)
     target_link_libraries(mem PRIVATE ${log-lib})

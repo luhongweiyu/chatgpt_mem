@@ -60,6 +60,13 @@ typedef struct MemApi {
 
     /* ABI slot recovered from the binary. The original performed remote SO injection. */
     int32_t (*inject_so)(int32_t pid, const char* so_path);
+
+    /*
+     * Local extension appended after the recovered 9-slot ABI.
+     * Enables privileged slot 9 only after /proc/<pid>/exe exactly matches
+     * the configured MEM_ALLOWED_EXE_PATH.
+     */
+    bool (*init)(int32_t pid);
 } MemApi;
 
 MemApi* get_mem(void);
